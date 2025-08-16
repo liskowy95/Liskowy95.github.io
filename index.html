@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Księżyc – faza i oświetlenie (PNG na żywo)</title>
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#0a0e17; --card:#0e1320; --ink:#e6e8ef; --muted:#9aa3b2; --accent:#7aa2ff;
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 70% 20%, #121a2b 0%, var(--bg) 60%);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color:var(--ink)}
+    .wrap{max-width:900px;margin:0 auto;padding:24px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:22px; box-shadow: 0 20px 60px rgba(0,0,0,.35)}
+    h1{font-size:clamp(22px,2.8vw,32px);font-weight:700;margin:0 0 8px}
+    p{margin:.35rem 0;color:var(--muted)}
+    .row{display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+    .col{flex:1 1 340px}
+    .moonbox{display:grid;place-items:center;}
+    #moonPNG{width:min(420px, 90vw);height:auto;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:#0b0f19}
+    .meta{display:grid;gap:8px;margin-top:8px}
+    .kpi{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+    .kpi b{font-size:22px;color:var(--ink)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    button{background:var(--card);color:var(--ink);border:1px solid rgba(255,255,255,.12);padding:10px 14px;border-radius:12px;cursor:pointer}
+    button:hover{border-color:var(--accent)}
+    code{background:rgba(255,255,255,.06);padding:.15rem .45rem;border-radius:6px}
+    footer{opacity:.7;margin-top:12px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Księżyc – faza i oświetlenie</h1>
+      <p>Obraz jest generowany lokalnie w przeglądarce jako <b>PNG</b> na podstawie aktualnego czasu i prostych wzorów astronomicznych. Odświeża się automatycznie.</p>
+
+      <div class="row">
+        <div class="col moonbox">
+          <img id="moonPNG" alt="Aktualna tarcza Księżyca (PNG)" />
+          <div class="toolbar">
+            <button id="dl">Pobierz PNG</button>
+            <button id="refresh">Odśwież teraz</button>
+          </div>
+        </div>
+        <div class="col">
+          <div class="meta">
+            <div class="kpi">Faza: <b id="phaseName">—</b></div>
+            <div class="kpi">Oświetlenie tarczy: <b id="illum">—</b></div>
+            <div class="kpi">Wiek Księżyca: <b id="age">—</b></div>
+            <div class="kpi">Czas: <b id="ts">—</b> (<span id="tz"></span>)</div>
+          </div>
+          <p><small>Uwaga: To jest wizualizacja uproszczona (bez libracji i perspektywy). Do zastosowań naukowych użyj danych efemeryd.</small></p>
+          <footer>Algorytm: <code>synodic ≈ 29.530588 d</code>, epoch <code>2000‑01‑06 18:14 UTC</code>.</footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="work" width="800" height="800" style="display:none"></canvas>
+
+  <script>
+  const SYNODIC_DAYS = 29.530588853;
+  const EPOCH = Date.UTC(2000,0,6,18,14,0);
+  function moonStats(d){const t = d.getTime();let days = (t - EPOCH) / 86400000;let age = ((days % SYNODIC_DAYS) + SYNODIC_DAYS) % SYNODIC_DAYS;const phase = age / SYNODIC_DAYS;const angle = phase * 2 * Math.PI;const illum = (1 - Math.cos(angle)) / 2;return {age, phase, angle, illum};}
+  function phaseName(phase){const names = ["Nów","Sierp przybywający","I kwadra","Garbaty przybywający","Pełnia","Garbaty ubywający","III kwadra","Sierp ubywający"];const idx = Math.round((phase*8)) % 8;return names[idx];}
+  function drawMoonPNG(date=new Date()){const {phase, angle, illum, age} = moonStats(date);const cvs = document.getElementById('work');const ctx = cvs.getContext('2d');const W = cvs.width = 1200;const H = cvs.height = 1200;ctx.clearRect(0,0,W,H);ctx.fillStyle = '#0b0f19';ctx.fillRect(0,0,W,H);ctx.globalAlpha = 0.8;for(let i=0;i<120;i++){const x=Math.random()*W, y=Math.random()*H, r=Math.random()*1.6+0.3;ctx.fillStyle = 'white';ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();}ctx.globalAlpha = 1;const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36;ctx.fillStyle = '#2c2f3b';ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();ctx.fillStyle = '#e7e9f0';ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();const c = Math.cos(angle);const rx = Math.abs(c) * r;const shift = -c * r;ctx.save();ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();ctx.globalCompositeOperation = 'destination-out';ctx.fillStyle = 'black';ctx.beginPath();ctx.ellipse(cx + shift, cy, rx, r*1.02, 0, 0, Math.PI*2);ctx.fill();if(phase > 0.5){ctx.beginPath();ctx.rect(0,0,cx+shift, H);ctx.fill();}ctx.restore();const url = cvs.toDataURL('image/png');document.getElementById('moonPNG').src = url;document.getElementById('phaseName').textContent = phaseName(phase);document.getElementById('illum').textContent = `${(illum*100).toFixed(1)}%`;document.getElementById('age').textContent = `${age.toFixed(2)} dnia`;document.getElementById('ts').textContent = new Date().toLocaleString();document.getElementById('tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;return url;}
+  function refresh(){ drawMoonPNG(new Date()); }
+  document.getElementById('refresh').addEventListener('click', refresh);
+  document.getElementById('dl').addEventListener('click', ()=>{const a = document.createElement('a');a.download = `ksiezyc_${Date.now()}.png`;a.href = document.getElementById('moonPNG').src;a.click();});
+  refresh();setInterval(refresh,60000);
+  </script>
+</body>
+</html>
